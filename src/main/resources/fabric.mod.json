@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "bleeding-edge-minecraft",
+	"version": "${version}",
+	"name": "Bleeding Edge Minecraft",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/bleeding-edge-minecraft/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"nessa.bledmi.BleedingEdgeMinecraft"
+		],
+		"client": [
+			"nessa.bledmi.client.BleedingEdgeMinecraftClient"
+		]
+	},
+	"mixins": [
+		"bleeding-edge-minecraft.mixins.json",
+		{
+			"config": "bleeding-edge-minecraft.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.2",
+		"minecraft": "~26.2-",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
