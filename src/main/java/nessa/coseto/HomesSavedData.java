@@ -143,7 +143,7 @@ public class HomesSavedData {
 
     public static void reload() { INSTANCE.reloadInternal(); }
 
-    private static String dimensionKey(ServerLevel world) {
+    public static String dimensionKey(ServerLevel world) {
         if (world == null) return LEGACY_DIM;
         try {
             java.lang.reflect.Method mDim = world.getClass().getMethod("dimension");

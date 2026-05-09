@@ -33,6 +33,7 @@ import net.minecraft.core.particles.ParticleTypes;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
+import net.minecraft.server.MinecraftServer;
 
 public class BleedingEdgeMinecraft implements ModInitializer {
 public static final String MOD_ID = "core-server-tools";
@@ -107,6 +108,142 @@ private static String resolvePlayerName(net.minecraft.server.MinecraftServer ser
 		// ignore and fallback
 	}
 	return uuid.toString();
+}
+
+private static ServerLevel findLevelByDimensionString(net.minecraft.server.MinecraftServer server, String dim) {
+    if (server == null || dim == null) return null;
+    // Try direct lookup via ResourceKey if available
+    try {
+        Class<?> resourceLocationClass = Class.forName("net.minecraft.resources.ResourceLocation");
+        Object resLoc = null;
+        try {
+            resLoc = resourceLocationClass.getConstructor(String.class).newInstance(dim);
+        } catch (Exception ex) {
+            resLoc = null;
+        }
+        if (resLoc != null) {
+            try {
+                Class<?> resourceKeyClass = Class.forName("net.minecraft.resources.ResourceKey");
+                Object registryDim = null;
+                try {
+                    Class<?> registriesClass = Class.forName("net.minecraft.core.registries.Registries");
+                    java.lang.reflect.Field f = registriesClass.getField("DIMENSION");
+                    registryDim = f.get(null);
+                } catch (Exception e) {
+                    try {
+                        Class<?> registryClass = Class.forName("net.minecraft.core.Registry");
+                        java.lang.reflect.Field f2 = registryClass.getField("DIMENSION");
+                        registryDim = f2.get(null);
+                    } catch (Exception e2) {
+                        registryDim = null;
+                    }
+                }
+                if (registryDim != null) {
+                    java.lang.reflect.Method createMethod = null;
+                    for (java.lang.reflect.Method m : resourceKeyClass.getMethods()) {
+                        if (m.getName().equals("create") && m.getParameterCount() == 2) { createMethod = m; break; }
+                    }
+                    if (createMethod != null) {
+                        Object resourceKey = createMethod.invoke(null, registryDim, resLoc);
+                        if (resourceKey != null) {
+                            for (java.lang.reflect.Method m : server.getClass().getMethods()) {
+                                if (m.getName().equals("getLevel") && m.getParameterCount() == 1) {
+                                    try {
+                                        Object lvl = m.invoke(server, resourceKey);
+                                        if (lvl instanceof ServerLevel) return (ServerLevel) lvl;
+                                    } catch (Exception ex) { /* ignore */ }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable t) { /* ignore */ }
+        }
+    } catch (Throwable t) { /* ignore */ }
+
+    // Fallback: iterate server methods that return Iterable or array and find matching dimension key
+    for (java.lang.reflect.Method m : server.getClass().getMethods()) {
+        if (m.getParameterCount() != 0) continue;
+        Object out = null;
+        try { out = m.invoke(server); } catch (Throwable t) { continue; }
+        if (out == null) continue;
+        if (out instanceof Iterable) {
+            for (Object o : (Iterable) out) {
+                if (o instanceof ServerLevel) {
+                    try {
+                        String k = HomesSavedData.dimensionKey((ServerLevel) o);
+                        if (dim.equals(k)) return (ServerLevel) o;
+                    } catch (Throwable t) {}
+                }
+            }
+        } else if (out.getClass().isArray()) {
+            Object[] arr = (Object[]) out;
+            for (Object o : arr) {
+                if (o instanceof ServerLevel) {
+                    try {
+                        String k = HomesSavedData.dimensionKey((ServerLevel) o);
+                        if (dim.equals(k)) return (ServerLevel) o;
+                    } catch (Throwable t) {}
+                }
+            }
+        }
+    }
+    return null;
+}
+
+private static boolean teleportAcrossDimension(net.minecraft.server.MinecraftServer server, ServerPlayer player, ServerLevel targetLevel, double x, double y, double z) {
+    if (server == null || player == null || targetLevel == null) return false;
+    // Try ServerPlayer.teleportTo(ServerLevel, double, double, double) or variants
+    try {
+        for (java.lang.reflect.Method m : player.getClass().getMethods()) {
+            if (!m.getName().equals("teleportTo")) continue;
+            Class<?>[] params = m.getParameterTypes();
+            if (params.length >= 4 && ServerLevel.class.isAssignableFrom(params[0])) {
+                Object[] args = new Object[params.length];
+                args[0] = targetLevel;
+                args[1] = x;
+                args[2] = y;
+                args[3] = z;
+                if (params.length >= 6) {
+                    args[4] = player.getYRot();
+                    args[5] = player.getXRot();
+                }
+                try { m.invoke(player, args); return true; } catch (Throwable t) { /* ignore */ }
+            }
+        }
+    } catch (Throwable t) { /* ignore */ }
+
+    // Try PlayerList teleport methods
+    try {
+        Object playerList = server.getPlayerList();
+        if (playerList != null) {
+            for (java.lang.reflect.Method m : playerList.getClass().getMethods()) {
+                String name = m.getName();
+                if (!name.equals("teleport") && !name.equals("moveToWorld")) continue;
+                Class<?>[] params = m.getParameterTypes();
+                try {
+                    if (params.length == 7 && params[0].isAssignableFrom(player.getClass()) && ServerLevel.class.isAssignableFrom(params[1]) &&
+                        params[2] == double.class && params[3] == double.class && params[4] == double.class &&
+                        params[5] == float.class && params[6] == float.class) {
+                        m.invoke(playerList, player, targetLevel, x, y, z, player.getYRot(), player.getXRot());
+                        return true;
+                    }
+                    if (params.length == 6 && params[0].isAssignableFrom(player.getClass()) && ServerLevel.class.isAssignableFrom(params[1]) &&
+                        params[2] == double.class && params[3] == double.class && params[4] == double.class) {
+                        m.invoke(playerList, player, targetLevel, x, y, z, player.getYRot());
+                        return true;
+                    }
+                    if (params.length == 6 && params[0].isAssignableFrom(player.getClass()) && params[1] == double.class && params[2] == double.class &&
+                        params[3] == double.class && params[4] == float.class && params[5] == float.class) {
+                        m.invoke(playerList, player, x, y, z, player.getYRot(), player.getXRot());
+                        return true;
+                    }
+                } catch (Throwable t) { /* ignore and continue */ }
+            }
+        }
+    } catch (Throwable t) { /* ignore */ }
+
+    return false;
 }
 
 @Override
@@ -696,14 +833,34 @@ dispatcher.register(Commands.literal("home").executes(context -> {
             source.sendFailure(Component.literal("No home set. Use /sethome first."));
             return 0;
         }
-        BlockPos pos = HomesSavedData.get(world).getHome(player.getUUID());
-        if (pos == null) {
-            source.sendFailure(Component.literal("Home is set in dimension: " + rec.dim + ". Switch to that world to use /home."));
-            return 0;
-        } else {
+        String currentDim = HomesSavedData.dimensionKey(world);
+        if (currentDim.equals(rec.dim)) {
+            BlockPos pos = HomesSavedData.get(world).getHome(player.getUUID());
+            if (pos == null) {
+                source.sendFailure(Component.literal("No home set. Use /sethome first."));
+                return 0;
+            }
             player.teleportTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
             source.sendSuccess(() -> Component.literal("Teleported to home."), false);
             return 1;
+        } else {
+            net.minecraft.server.MinecraftServer server = source.getServer();
+            ServerLevel targetLevel = findLevelByDimensionString(server, rec.dim);
+            if (targetLevel == null) {
+                source.sendFailure(Component.literal("Home is set in unknown dimension: " + rec.dim));
+                return 0;
+            }
+            double tx = rec.pos.getX() + 0.5;
+            double ty = rec.pos.getY();
+            double tz = rec.pos.getZ() + 0.5;
+            boolean ok = teleportAcrossDimension(server, player, targetLevel, tx, ty, tz);
+            if (ok) {
+                source.sendSuccess(() -> Component.literal("Teleported to home in " + rec.dim), false);
+                return 1;
+            } else {
+                source.sendFailure(Component.literal("Failed to teleport across dimensions. Switch to that world to use /home."));
+                return 0;
+            }
         }
     } catch (CommandSyntaxException e) {
         source.sendFailure(Component.literal("Only players can use /home."));
