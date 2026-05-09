@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
 import net.minecraft.server.MinecraftServer;
 
-public class BleedingEdgeMinecraft implements ModInitializer {
+public class CoreServerTools implements ModInitializer {
 public static final String MOD_ID = "core-server-tools";
 
 public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);

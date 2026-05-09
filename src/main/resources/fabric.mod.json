@@ -16,7 +16,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "nessa.coseto.BleedingEdgeMinecraft"
+      "nessa.coseto.CoreServerTools"
     ]
   },
   "mixins": [
