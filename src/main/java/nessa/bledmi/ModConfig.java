@@ -9,11 +9,19 @@ import java.io.IOException;
 import java.util.Properties;
 
 public class ModConfig {
-    private static final Path CONFIG_PATH = Paths.get("config", "core-server-tools.properties");
+    private static final Path CONFIG_PATH;
     private static final int DEFAULT_MAX_CLAIMS = 12;
     private static volatile int maxClaims = DEFAULT_MAX_CLAIMS;
 
     static {
+        Path cfg;
+        try {
+            cfg = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("core-server-tools.properties");
+        } catch (Throwable t) {
+            // Fall back to a ./config/ directory if FabricLoader is not available
+            cfg = Paths.get("config", "core-server-tools.properties");
+        }
+        CONFIG_PATH = cfg;
         load();
     }
 
