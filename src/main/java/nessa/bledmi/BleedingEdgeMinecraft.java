@@ -330,8 +330,9 @@ ServerLevel world = source.getLevel();
 boolean isOp = source.getServer() != null && source.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(player.getGameProfile()));
 if (!isOp) {
     int currentClaims = ClaimsSavedData.get(world).getClaims(player.getUUID()).size();
-    if (currentClaims >= 12) {
-        source.sendFailure(Component.literal("You have reached the maximum of 12 claims."));
+    int maxClaims = ModConfig.getMaxClaims();
+    if (currentClaims >= maxClaims) {
+        source.sendFailure(Component.literal("You have reached the maximum of " + maxClaims + " claims."));
         return 0;
     }
 }
@@ -375,8 +376,9 @@ ServerLevel world = source.getLevel();
 boolean isTargetOp = source.getServer() != null && source.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(target.getGameProfile()));
 if (!isTargetOp) {
     int targetClaims = ClaimsSavedData.get(world).getClaims(target.getUUID()).size();
-    if (targetClaims >= 12) {
-        source.sendFailure(Component.literal(target.getName().getString() + " has reached the maximum of 12 claims."));
+    int maxClaims = ModConfig.getMaxClaims();
+    if (targetClaims >= maxClaims) {
+        source.sendFailure(Component.literal(target.getName().getString() + " has reached the maximum of " + maxClaims + " claims."));
         return 0;
     }
 }
@@ -517,8 +519,9 @@ java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(player.getU
 				if (isOp) {
 					source.sendSuccess(() -> Component.literal("You have " + count + " claims (operator: unlimited)." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
 				} else {
-					int remaining = Math.max(0, 12 - count);
-					source.sendSuccess(() -> Component.literal("You have " + count + "/12 claims - " + remaining + " remaining." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
+					int maxClaims = ModConfig.getMaxClaims();
+                    int remaining = Math.max(0, maxClaims - count);
+					source.sendSuccess(() -> Component.literal("You have " + count + "/" + maxClaims + " claims - " + remaining + " remaining." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
 				}
 				return 1;
 
@@ -540,8 +543,9 @@ java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(target.getU
 				if (isTargetOp) {
 					source.sendSuccess(() -> Component.literal(target.getName().getString() + " has " + count + " claims (operator: unlimited)." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
 				} else {
-					int remaining = Math.max(0, 12 - count);
-					source.sendSuccess(() -> Component.literal(target.getName().getString() + " has " + count + "/12 claims - " + remaining + " remaining." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
+					int maxClaims = ModConfig.getMaxClaims();
+                    int remaining = Math.max(0, maxClaims - count);
+					source.sendSuccess(() -> Component.literal(target.getName().getString() + " has " + count + "/" + maxClaims + " claims - " + remaining + " remaining." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
 				}
 				return 1;
 

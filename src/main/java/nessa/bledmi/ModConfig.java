@@ -1,0 +1,61 @@
+package nessa.bledmi;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.IOException;
+import java.util.Properties;
+
+public class ModConfig {
+    private static final Path CONFIG_PATH = Paths.get("config", "core-server-tools.properties");
+    private static final int DEFAULT_MAX_CLAIMS = 12;
+    private static volatile int maxClaims = DEFAULT_MAX_CLAIMS;
+
+    static {
+        load();
+    }
+
+    public static synchronized void load() {
+        try {
+            Path parent = CONFIG_PATH.getParent();
+            if (parent != null && !Files.exists(parent)) {
+                Files.createDirectories(parent);
+            }
+            Properties p = new Properties();
+            if (Files.exists(CONFIG_PATH)) {
+                try (InputStream in = Files.newInputStream(CONFIG_PATH)) {
+                    p.load(in);
+                }
+            } else {
+                // write default config
+                p.setProperty("maxClaims", String.valueOf(DEFAULT_MAX_CLAIMS));
+                try (OutputStream out = Files.newOutputStream(CONFIG_PATH)) {
+                    p.store(out, "Core Server Tools configuration");
+                }
+            }
+            String mc = p.getProperty("maxClaims");
+            if (mc != null) {
+                try {
+                    maxClaims = Integer.parseInt(mc.trim());
+                } catch (NumberFormatException e) {
+                    maxClaims = DEFAULT_MAX_CLAIMS;
+                }
+            } else {
+                maxClaims = DEFAULT_MAX_CLAIMS;
+            }
+        } catch (IOException e) {
+            // if anything goes wrong, keep defaults
+            maxClaims = DEFAULT_MAX_CLAIMS;
+        }
+    }
+
+    public static int getMaxClaims() {
+        return maxClaims;
+    }
+
+    public static void reload() {
+        load();
+    }
+}
