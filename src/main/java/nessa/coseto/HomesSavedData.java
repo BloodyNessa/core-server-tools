@@ -22,7 +22,7 @@ import java.util.UUID;
  */
 public class HomesSavedData {
     private static final Path FILE = Paths.get("core-server-tools", "homes.dat");
-    private static final String LEGACY_DIM = "GLOBAL";
+    public static final String LEGACY_DIM = "GLOBAL";
     private static final HomesSavedData INSTANCE = new HomesSavedData();
 
     public static class HomeRecord {
