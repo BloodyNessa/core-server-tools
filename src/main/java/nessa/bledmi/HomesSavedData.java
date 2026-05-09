@@ -81,6 +81,12 @@ public class HomesSavedData {
 		save();
 	}
 
+	public synchronized boolean removeHome(UUID uuid) {
+		boolean removed = homes.remove(uuid) != null;
+		if (removed) save();
+		return removed;
+	}
+
 	public synchronized BlockPos getHome(UUID uuid) {
 		return homes.get(uuid);
 	}

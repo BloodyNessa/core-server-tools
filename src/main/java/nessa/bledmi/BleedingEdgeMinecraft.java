@@ -49,6 +49,23 @@ public class BleedingEdgeMinecraft implements ModInitializer {
 				return 1;
 			}));
 
+			dispatcher.register(Commands.literal("delhome").executes(context -> {
+				CommandSourceStack source = context.getSource();
+				try {
+					ServerPlayer player = source.getPlayerOrException();
+					ServerLevel world = source.getLevel();
+					boolean removed = HomesSavedData.get(world).removeHome(player.getUUID());
+					if (removed) {
+						source.sendSuccess(() -> Component.literal("Home removed."), false);
+					} else {
+						source.sendFailure(Component.literal("No home set."));
+					}
+				} catch (CommandSyntaxException e) {
+					source.sendFailure(Component.literal("Only players can use /delhome."));
+				}
+				return 1;
+			}));
+
 			dispatcher.register(Commands.literal("home").executes(context -> {
 				CommandSourceStack source = context.getSource();
 				try {
