@@ -834,7 +834,7 @@ dispatcher.register(Commands.literal("home").executes(context -> {
             return 0;
         }
         String currentDim = HomesSavedData.dimensionKey(world);
-        if (currentDim.equals(rec.dim)) {
+        if (HomesSavedData.LEGACY_DIM.equals(rec.dim) || currentDim.equals(rec.dim)) {
             BlockPos pos = HomesSavedData.get(world).getHome(player.getUUID());
             if (pos == null) {
                 source.sendFailure(Component.literal("No home set. Use /sethome first."));
