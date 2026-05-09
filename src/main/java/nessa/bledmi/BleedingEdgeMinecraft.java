@@ -40,6 +40,8 @@ public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	// Players who currently have /seeclaims enabled
 	private static final java.util.Set<java.util.UUID> SEEING_PLAYERS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	// map of player -> last seen chunk (packed long: (cx << 32) | (cz & 0xffffffffL))
+	private static final java.util.Map<java.util.UUID, Long> SEEING_LAST_CHUNK = new java.util.concurrent.ConcurrentHashMap<>();
 	// simple tick counter for throttling (runs on server thread)
 	private static int tickCounter = 0;
 
@@ -130,6 +132,33 @@ ServerTickEvents.END_SERVER_TICK.register(server -> {
 		ServerLevel level = (ServerLevel) sp.level();
 		int pcx = sp.blockPosition().getX() >> 4;
 		int pcz = sp.blockPosition().getZ() >> 4;
+		long currentChunkKey = (((long)pcx) << 32) | (pcz & 0xffffffffL);
+		Long prevChunkKey = SEEING_LAST_CHUNK.get(uuid);
+		if (prevChunkKey == null) {
+			// initialize to current to avoid immediate announcement
+			SEEING_LAST_CHUNK.put(uuid, currentChunkKey);
+		} else if (prevChunkKey.longValue() != currentChunkKey) {
+			int prevCx = (int)(prevChunkKey.longValue() >> 32);
+			int prevCz = (int)(prevChunkKey.longValue() & 0xffffffffL);
+			UUID prevOwner = ClaimsSavedData.get(level).getOwner(prevCx, prevCz);
+			UUID currOwner = ClaimsSavedData.get(level).getOwner(pcx, pcz);
+			if (currOwner != null && (prevOwner == null || !currOwner.equals(prevOwner))) {
+				Component ownerComp;
+				ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(currOwner);
+				if (ownerPlayer != null) ownerComp = ownerPlayer.getName(); else ownerComp = Component.literal(currOwner.toString());
+				int nameColor;
+				if (currOwner.equals(sp.getUUID())) {
+					nameColor = 0x99FF99; // light green
+				} else if (TrustsSavedData.get(level).isTrusted(currOwner, sp.getUUID())) {
+					nameColor = 0x99CCFF; // light blue
+				} else {
+					nameColor = 0xFF6666; // red
+				}
+				ownerComp = ((net.minecraft.network.chat.MutableComponent)ownerComp).withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(nameColor)));
+				sp.sendSystemMessage(Component.literal("Claim owned by: ").append(ownerComp));
+			}
+			SEEING_LAST_CHUNK.put(uuid, currentChunkKey);
+		}
 		int radiusChunks = 10; // show claims within 10 chunks
 		int stride = 4; // spacing along chunk edge
 		int shown = 0;
@@ -505,6 +534,11 @@ dispatcher.register(Commands.literal("seeclaims").executes(context -> {
 		ServerPlayer player = source.getPlayerOrException();
 		boolean added = SEEING_PLAYERS.add(player.getUUID());
 		if (added) {
+			// initialize last seen chunk to current player chunk to avoid immediate message
+			int pcxInit = player.blockPosition().getX() >> 4;
+			int pczInit = player.blockPosition().getZ() >> 4;
+			long initKey = (((long)pcxInit) << 32) | (pczInit & 0xffffffffL);
+			SEEING_LAST_CHUNK.put(player.getUUID(), initKey);
 			source.sendSuccess(() -> Component.literal("Showing claims. Use /unseeclaims to stop."), false);
 			return 1;
 		} else {
@@ -524,6 +558,7 @@ dispatcher.register(Commands.literal("unseeclaims").executes(context -> {
 		ServerPlayer player = source.getPlayerOrException();
 		boolean removed = SEEING_PLAYERS.remove(player.getUUID());
 		if (removed) {
+			SEEING_LAST_CHUNK.remove(player.getUUID());
 			source.sendSuccess(() -> Component.literal("Stopped showing claims."), false);
 			return 1;
 		} else {
