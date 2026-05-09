@@ -25,7 +25,7 @@
   "mixins": [
     "core-server-tools.mixins.json",
     {
-      "config": "bleeding-edge-minecraft.client.mixins.json",
+      "config": "core-server-tools.client.mixins.json",
       "environment": "client"
     }
   ],
