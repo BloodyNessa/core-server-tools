@@ -1,4 +1,4 @@
-Copilot instructions for bleeding-edge-minecraft
+Copilot instructions for core-server-tools
 
 Purpose
 - Repository-specific guidance for Copilot CLI and other AI assistants working on this Fabric mod template.
@@ -20,7 +20,7 @@ Build, test, and run (use these commands in the project root)
 
 High-level architecture
 - Fabric mod template using Fabric Loom (configured in build.gradle / gradle.properties).
-- Single Gradle project named 'bleeding-edge-minecraft'. Java compatibility is configured in build.gradle/gradle.properties.
+- Single Gradle project named 'core-server-tools'. Java compatibility is configured in build.gradle/gradle.properties.
 - Two source sets:
   - src/main — common and server-side code (non-client-specific). Use this for code that must run on dedicated servers.
   - src/client — client-only code (renderers, client events, anything that references client-only Minecraft classes).

@@ -29,8 +29,8 @@ import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.UUID;
 
-public class BleedingEdgeMinecraft implements ModInitializer {
-	public static final String MOD_ID = "bleeding-edge-minecraft";
+public class CoreServerTools implements ModInitializer {
+	public static final String MOD_ID = "core-server-tools";
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.
