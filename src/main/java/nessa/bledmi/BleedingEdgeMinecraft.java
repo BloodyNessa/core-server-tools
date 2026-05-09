@@ -112,6 +112,14 @@ private static String resolvePlayerName(net.minecraft.server.MinecraftServer ser
 @Override
 public void onInitialize() {
 LOGGER.info("Hello Fabric world! Registering commands...");
+        try {
+            java.nio.file.Path cfg = ModConfig.getConfigPath();
+            LOGGER.info("CoreServerTools config path: {}", cfg.toAbsolutePath().toString());
+            LOGGER.info("CoreServerTools config exists: {}", java.nio.file.Files.exists(cfg));
+            LOGGER.info("CoreServerTools maxClaims: {}", ModConfig.getMaxClaims());
+        } catch (Throwable t) {
+            LOGGER.warn("Could not resolve CoreServerTools config path", t);
+        }
 
 
 // Update name cache on player join

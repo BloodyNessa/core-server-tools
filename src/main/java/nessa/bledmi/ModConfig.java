@@ -74,4 +74,8 @@ public class ModConfig {
     public static void reload() {
         load();
     }
+
+    public static java.nio.file.Path getConfigPath() {
+        return CONFIG_PATH;
+    }
 }
