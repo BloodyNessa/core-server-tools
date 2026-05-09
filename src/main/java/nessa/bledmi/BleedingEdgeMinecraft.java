@@ -26,6 +26,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
+import nessa.bledmi.TrustsSavedData;
 
 import java.util.UUID;
 
@@ -37,7 +38,11 @@ public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 private static boolean isAllowed(ServerPlayer player, ServerLevel world, BlockPos pos) {
 UUID owner = ClaimsSavedData.get(world).getOwner(pos.getX() >> 4, pos.getZ() >> 4);
 if (owner == null) return true;
-return owner.equals(player.getUUID());
+UUID playerId = player.getUUID();
+if (owner.equals(playerId)) return true;
+// trusted players may act in owner's claims
+if (TrustsSavedData.get(world).isTrusted(owner, playerId)) return true;
+return false;
 }
 
 @Override
@@ -349,6 +354,62 @@ java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(target.getU
 
 } catch (CommandSyntaxException e) {
 source.sendFailure(Component.literal("Usage: /claims [player]"));
+return 0;
+}
+})
+)
+);
+
+// /trust
+dispatcher.register(
+Commands.literal("trust")
+.then(Commands.argument("player", EntityArgument.player())
+.executes(context -> {
+CommandSourceStack source = context.getSource();
+try {
+ServerPlayer owner = source.getPlayerOrException();
+ServerPlayer target = EntityArgument.getPlayer(context, "player");
+if (owner.getUUID().equals(target.getUUID())) {
+source.sendFailure(Component.literal("You cannot trust yourself."));
+return 0;
+}
+ServerLevel world = source.getLevel();
+boolean added = TrustsSavedData.get(world).trust(owner.getUUID(), target.getUUID());
+if (added) {
+source.sendSuccess(() -> Component.literal("Trusted " + target.getName().getString() + "."), false);
+return 1;
+} else {
+source.sendFailure(Component.literal(target.getName().getString() + " is already trusted."));
+return 0;
+}
+} catch (CommandSyntaxException e) {
+source.sendFailure(Component.literal("Only players can use /trust <player>."));
+return 0;
+}
+})
+)
+);
+
+// /untrust
+dispatcher.register(
+Commands.literal("untrust")
+.then(Commands.argument("player", EntityArgument.player())
+.executes(context -> {
+CommandSourceStack source = context.getSource();
+try {
+ServerPlayer owner = source.getPlayerOrException();
+ServerPlayer target = EntityArgument.getPlayer(context, "player");
+ServerLevel world = source.getLevel();
+boolean removed = TrustsSavedData.get(world).untrust(owner.getUUID(), target.getUUID());
+if (removed) {
+source.sendSuccess(() -> Component.literal("Untrusted " + target.getName().getString() + "."), false);
+return 1;
+} else {
+source.sendFailure(Component.literal(target.getName().getString() + " was not trusted."));
+return 0;
+}
+} catch (CommandSyntaxException e) {
+source.sendFailure(Component.literal("Only players can use /untrust <player>."));
 return 0;
 }
 })
