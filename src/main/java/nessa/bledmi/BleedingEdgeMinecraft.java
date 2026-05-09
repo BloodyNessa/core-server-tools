@@ -150,6 +150,15 @@ BlockPos pos = player.blockPosition();
 int chunkX = pos.getX() >> 4;
 int chunkZ = pos.getZ() >> 4;
 ServerLevel world = source.getLevel();
+// Enforce 12-claim limit for non-operators
+boolean isOp = source.getServer() != null && source.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(player.getGameProfile()));
+if (!isOp) {
+    int currentClaims = ClaimsSavedData.get(world).getClaims(player.getUUID()).size();
+    if (currentClaims >= 12) {
+        source.sendFailure(Component.literal("You have reached the maximum of 12 claims."));
+        return 0;
+    }
+}
 boolean success = ClaimsSavedData.get(world).claimChunk(player.getUUID(), chunkX, chunkZ);
 if (success) {
 source.sendSuccess(() -> Component.literal("Chunk claimed (" + chunkX + ", " + chunkZ + ")."), false);
@@ -175,6 +184,15 @@ BlockPos pos = operator.blockPosition();
 int chunkX = pos.getX() >> 4;
 int chunkZ = pos.getZ() >> 4;
 ServerLevel world = source.getLevel();
+// Enforce 12-claim limit for non-operators (applies to the target)
+boolean isTargetOp = source.getServer() != null && source.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(target.getGameProfile()));
+if (!isTargetOp) {
+    int targetClaims = ClaimsSavedData.get(world).getClaims(target.getUUID()).size();
+    if (targetClaims >= 12) {
+        source.sendFailure(Component.literal(target.getName().getString() + " has reached the maximum of 12 claims."));
+        return 0;
+    }
+}
 boolean success = ClaimsSavedData.get(world).claimChunk(target.getUUID(), chunkX, chunkZ);
 if (success) {
 source.sendSuccess(() -> Component.literal("Chunk claimed for " + target.getName().getString() + " (" + chunkX + ", " + chunkZ + ")."), false);
@@ -296,13 +314,16 @@ try {
 ServerPlayer player = source.getPlayerOrException();
 ServerLevel world = source.getLevel();
 java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(player.getUUID());
-if (claims.isEmpty()) {
-source.sendFailure(Component.literal("You have no claims."));
-return 0;
-} else {
-source.sendSuccess(() -> Component.literal("Your claims: " + String.join(", ", claims)), false);
-return 1;
-}
+				int count = claims.size();
+				boolean isOp = source.getServer() != null && source.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(player.getGameProfile()));
+				if (isOp) {
+					source.sendSuccess(() -> Component.literal("You have " + count + " claims (operator: unlimited)." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
+				} else {
+					int remaining = Math.max(0, 12 - count);
+					source.sendSuccess(() -> Component.literal("You have " + count + "/12 claims - " + remaining + " remaining." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
+				}
+				return 1;
+
 } catch (CommandSyntaxException e) {
 source.sendFailure(Component.literal("Only players can use /claims."));
 return 0;
@@ -316,13 +337,16 @@ try {
 ServerPlayer target = EntityArgument.getPlayer(context, "player");
 ServerLevel world = source.getLevel();
 java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(target.getUUID());
-if (claims.isEmpty()) {
-source.sendFailure(Component.literal("Player has no claims."));
-return 0;
-} else {
-source.sendSuccess(() -> Component.literal(target.getName().getString() + "'s claims: " + String.join(", ", claims)), false);
-return 1;
-}
+				int count = claims.size();
+				boolean isTargetOp = source.getServer() != null && source.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(target.getGameProfile()));
+				if (isTargetOp) {
+					source.sendSuccess(() -> Component.literal(target.getName().getString() + " has " + count + " claims (operator: unlimited)." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
+				} else {
+					int remaining = Math.max(0, 12 - count);
+					source.sendSuccess(() -> Component.literal(target.getName().getString() + " has " + count + "/12 claims - " + remaining + " remaining." + (count > 0 ? " Claims: " + String.join(", ", claims) : " No claims.")), false);
+				}
+				return 1;
+
 } catch (CommandSyntaxException e) {
 source.sendFailure(Component.literal("Usage: /claims [player]"));
 return 0;
