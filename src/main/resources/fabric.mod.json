@@ -3,13 +3,13 @@
   "id": "core-server-tools",
   "version": "${version}",
   "name": "Core Server Tools",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "Core server-side utilities: persistent homes, chunk claims, trusts, and visual outlines for Fabric servers.",
   "authors": [
-    "Me!"
+    "BloodyNessa"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/BloodyNessa/core-server-tools",
+    "sources": "https://github.com/BloodyNessa/core-server-tools"
   },
   "license": "CC0-1.0",
   "icon": "assets/core-server-tools/icon.png",
@@ -17,9 +17,6 @@
   "entrypoints": {
     "main": [
       "nessa.coseto.BleedingEdgeMinecraft"
-    ],
-    "client": [
-      "nessa.coseto.client.BleedingEdgeMinecraftClient"
     ]
   },
   "mixins": [
