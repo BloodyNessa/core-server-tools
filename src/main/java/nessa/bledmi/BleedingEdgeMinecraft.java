@@ -222,7 +222,17 @@ source.sendSuccess(() -> Component.literal("Chunk claimed (" + chunkX + ", " + c
 return 1;
 } else {
 UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
-source.sendFailure(Component.literal("Chunk already claimed by " + (owner != null ? owner.toString() : "someone")));
+String ownerName = "someone";
+if (owner != null) {
+    if (source.getServer() != null) {
+        ServerPlayer ownerPlayer = source.getServer().getPlayerList().getPlayer(owner);
+        if (ownerPlayer != null) ownerName = ownerPlayer.getName().getString();
+        else ownerName = owner.toString();
+    } else {
+        ownerName = owner.toString();
+    }
+}
+source.sendFailure(Component.literal("Chunk already claimed by " + ownerName));
 return 0;
 }
 } catch (CommandSyntaxException e) {
@@ -256,7 +266,17 @@ source.sendSuccess(() -> Component.literal("Chunk claimed for " + target.getName
 return 1;
 } else {
 UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
-source.sendFailure(Component.literal("Chunk already claimed by " + (owner != null ? owner.toString() : "someone")));
+String ownerName = "someone";
+if (owner != null) {
+    if (source.getServer() != null) {
+        ServerPlayer ownerPlayer = source.getServer().getPlayerList().getPlayer(owner);
+        if (ownerPlayer != null) ownerName = ownerPlayer.getName().getString();
+        else ownerName = owner.toString();
+    } else {
+        ownerName = owner.toString();
+    }
+}
+source.sendFailure(Component.literal("Chunk already claimed by " + ownerName));
 return 0;
 }
 } catch (CommandSyntaxException e) {
