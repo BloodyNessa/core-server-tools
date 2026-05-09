@@ -143,4 +143,11 @@ public class ClaimsSavedData {
 		if (removed > 0) save();
 		return removed;
 	}
+
+	/**
+	 * Return a copy of all claims map (key: "cx,cz" -> owner UUID).
+	 */
+	public synchronized java.util.Map<String, UUID> getAllClaims() {
+		return new java.util.HashMap<>(claims);
+	}
 }

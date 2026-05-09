@@ -27,13 +27,21 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import nessa.bledmi.TrustsSavedData;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.core.particles.ParticleTypes;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
 
 public class BleedingEdgeMinecraft implements ModInitializer {
 public static final String MOD_ID = "bleeding-edge-minecraft";
 
 public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+	// Players who currently have /seeclaims enabled
+	private static final java.util.Set<java.util.UUID> SEEING_PLAYERS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	// simple tick counter for throttling (runs on server thread)
+	private static int tickCounter = 0;
 
 private static boolean isAllowed(ServerPlayer player, ServerLevel world, BlockPos pos) {
 UUID owner = ClaimsSavedData.get(world).getOwner(pos.getX() >> 4, pos.getZ() >> 4);
@@ -110,6 +118,50 @@ return InteractionResult.PASS;
 });
 
 // Command registration
+
+// Register server tick handler for /seeclaims particles
+ServerTickEvents.END_SERVER_TICK.register(server -> {
+	tickCounter = (tickCounter + 1) % 10; // run every 10 ticks
+	if (tickCounter != 0) return;
+	for (java.util.UUID uuid : SEEING_PLAYERS) {
+		ServerPlayer sp = server.getPlayerList().getPlayer(uuid);
+		if (sp == null) continue;
+		if (!(sp.level() instanceof ServerLevel)) continue;
+		ServerLevel level = (ServerLevel) sp.level();
+		int pcx = sp.blockPosition().getX() >> 4;
+		int pcz = sp.blockPosition().getZ() >> 4;
+		int radiusChunks = 8; // show claims within 8 chunks
+		int stride = 4; // spacing along chunk edge
+		int shown = 0;
+		java.util.Map<String, UUID> all = ClaimsSavedData.get(level).getAllClaims();
+		for (java.util.Map.Entry<String, UUID> e : all.entrySet()) {
+			if (shown > 200) break; // avoid excessive particle spam per tick
+			String key = e.getKey();
+			String[] parts = key.split(",");
+			int cx = Integer.parseInt(parts[0]);
+			int cz = Integer.parseInt(parts[1]);
+			int dx = Math.abs(cx - pcx);
+			int dz = Math.abs(cz - pcz);
+			if (Math.max(dx, dz) > radiusChunks) continue;
+			int x0 = cx << 4;
+			int z0 = cz << 4;
+			int x1 = x0 + 15;
+			int z1 = z0 + 15;
+			double y = sp.getY() + 0.5;
+			for (int x = x0; x <= x1; x += stride) {
+				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x + 0.5, y, z0 + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x + 0.5, y, z1 + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				shown += 2;
+			}
+			for (int z = z0; z <= z1; z += stride) {
+				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x0 + 0.5, y, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x1 + 0.5, y, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				shown += 2;
+			}
+		}
+	}
+});
+
 CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 // /sethome
 dispatcher.register(Commands.literal("sethome").executes(context -> {
@@ -415,6 +467,44 @@ return 0;
 })
 )
 );
+
+// /seeclaims
+dispatcher.register(Commands.literal("seeclaims").executes(context -> {
+	CommandSourceStack source = context.getSource();
+	try {
+		ServerPlayer player = source.getPlayerOrException();
+		boolean added = SEEING_PLAYERS.add(player.getUUID());
+		if (added) {
+			source.sendSuccess(() -> Component.literal("Showing claims. Use /unseeclaims to stop."), false);
+			return 1;
+		} else {
+			source.sendFailure(Component.literal("You are already seeing claims. Use /unseeclaims to stop."));
+			return 0;
+		}
+	} catch (CommandSyntaxException e) {
+		source.sendFailure(Component.literal("Only players can use /seeclaims."));
+		return 0;
+	}
+}));
+
+// /unseeclaims
+dispatcher.register(Commands.literal("unseeclaims").executes(context -> {
+	CommandSourceStack source = context.getSource();
+	try {
+		ServerPlayer player = source.getPlayerOrException();
+		boolean removed = SEEING_PLAYERS.remove(player.getUUID());
+		if (removed) {
+			source.sendSuccess(() -> Component.literal("Stopped showing claims."), false);
+			return 1;
+		} else {
+			source.sendFailure(Component.literal("You were not seeing claims."));
+			return 0;
+		}
+	} catch (CommandSyntaxException e) {
+		source.sendFailure(Component.literal("Only players can use /unseeclaims."));
+		return 0;
+	}
+}));
 
 // /home
 dispatcher.register(Commands.literal("home").executes(context -> {
