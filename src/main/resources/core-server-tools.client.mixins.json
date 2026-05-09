@@ -1,6 +1,6 @@
 {
 "required": true,
-"package": "nessa.bledmi.mixin",
+"package": "nessa.coseto.mixin",
 "compatibilityLevel": "JAVA_25",
 "mixins": [
 "ExampleMixin",

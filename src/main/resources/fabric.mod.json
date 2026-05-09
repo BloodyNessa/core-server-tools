@@ -16,10 +16,10 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "nessa.bledmi.BleedingEdgeMinecraft"
+      "nessa.coseto.BleedingEdgeMinecraft"
     ],
     "client": [
-      "nessa.bledmi.client.BleedingEdgeMinecraftClient"
+      "nessa.coseto.client.BleedingEdgeMinecraftClient"
     ]
   },
   "mixins": [

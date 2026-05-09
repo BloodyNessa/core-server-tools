@@ -1,4 +1,4 @@
-package nessa.bledmi.client;
+package nessa.coseto.client;
 
 import net.fabricmc.api.ClientModInitializer;
 

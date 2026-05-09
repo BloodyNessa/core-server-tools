@@ -1,4 +1,4 @@
-package nessa.bledmi;
+package nessa.coseto;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
@@ -22,7 +22,7 @@ import java.util.UUID;
  * Note: This writes to the server's working directory (./bledmi_homes.dat).
  */
 public class HomesSavedData {
-	private static final Path FILE = Paths.get("bledmi_homes.dat");
+	private static final Path FILE = Paths.get("core-server-tools", "bledmi_homes.dat");
 	private static final HomesSavedData INSTANCE = new HomesSavedData();
 
 	private final Map<UUID, BlockPos> homes = new HashMap<>();
@@ -62,6 +62,8 @@ public class HomesSavedData {
 
 	private synchronized void save() {
 		try {
+			Path parent = FILE.getParent();
+			if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
 			Path tmp = FILE.resolveSibling(FILE.getFileName().toString() + ".tmp");
 			try (BufferedWriter w = Files.newBufferedWriter(tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				for (Map.Entry<UUID, BlockPos> e : homes.entrySet()) {

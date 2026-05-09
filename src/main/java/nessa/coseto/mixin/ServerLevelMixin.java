@@ -1,4 +1,4 @@
-package nessa.bledmi.mixin;
+package nessa.coseto.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,7 +19,7 @@ import net.minecraft.world.entity.item.PrimedTnt;
 
 import java.util.UUID;
 
-import nessa.bledmi.ClaimsSavedData;
+import nessa.coseto.ClaimsSavedData;
 
 @Mixin(ServerLevel.class)
 public class ServerLevelMixin {

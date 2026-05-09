@@ -1,4 +1,4 @@
-package nessa.bledmi;
+package nessa.coseto;
 
 import net.minecraft.server.level.ServerLevel;
 
@@ -19,7 +19,7 @@ import java.util.UUID;
  * Stored as lines: <uuid> <name>
  */
 public class NameCacheSavedData {
-    private static final Path FILE = Paths.get("bledmi_namecache.dat");
+    private static final Path FILE = Paths.get("core-server-tools", "bledmi_namecache.dat");
     private static final NameCacheSavedData INSTANCE = new NameCacheSavedData();
 
     private final Map<UUID, String> names = new HashMap<>();
@@ -62,6 +62,8 @@ public class NameCacheSavedData {
 
     private synchronized void save() {
         try {
+            Path parent = FILE.getParent();
+            if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
             Path tmp = FILE.resolveSibling(FILE.getFileName().toString() + ".tmp");
             try (BufferedWriter w = Files.newBufferedWriter(tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 for (Map.Entry<UUID, String> e : names.entrySet()) {

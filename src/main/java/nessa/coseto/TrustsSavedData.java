@@ -1,4 +1,4 @@
-package nessa.bledmi;
+package nessa.coseto;
 
 import net.minecraft.server.level.ServerLevel;
 
@@ -21,7 +21,7 @@ import java.util.UUID;
  * Stores lines of: <owner-uuid> <trusted-uuid>
  */
 public class TrustsSavedData {
-    private static final Path FILE = Paths.get("bledmi_trusts.dat");
+    private static final Path FILE = Paths.get("core-server-tools", "bledmi_trusts.dat");
     private static final TrustsSavedData INSTANCE = new TrustsSavedData();
 
     private final Map<UUID, Set<UUID>> trusts = new HashMap<>();
@@ -59,6 +59,8 @@ public class TrustsSavedData {
 
     private synchronized void save() {
         try {
+            Path parent = FILE.getParent();
+            if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
             Path tmp = FILE.resolveSibling(FILE.getFileName().toString() + ".tmp");
             try (BufferedWriter w = Files.newBufferedWriter(tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 for (Map.Entry<UUID, Set<UUID>> e : trusts.entrySet()) {

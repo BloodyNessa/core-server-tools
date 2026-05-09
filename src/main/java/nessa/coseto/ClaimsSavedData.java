@@ -1,4 +1,4 @@
-package nessa.bledmi;
+package nessa.coseto;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
@@ -22,7 +22,7 @@ import java.util.UUID;
  * Note: This is server-global and not world-scoped. Use ClaimsSavedData.get(world) to access.
  */
 public class ClaimsSavedData {
-	private static final Path FILE = Paths.get("bledmi_claims.dat");
+	private static final Path FILE = Paths.get("core-server-tools", "bledmi_claims.dat");
 	private static final ClaimsSavedData INSTANCE = new ClaimsSavedData();
 
 	private final Map<String, UUID> claims = new HashMap<>();
@@ -65,6 +65,8 @@ public class ClaimsSavedData {
 
 	private synchronized void save() {
 		try {
+			Path parent = FILE.getParent();
+			if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
 			Path tmp = FILE.resolveSibling(FILE.getFileName().toString() + ".tmp");
 			try (BufferedWriter w = Files.newBufferedWriter(tmp, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				for (Map.Entry<String, UUID> e : claims.entrySet()) {
