@@ -107,4 +107,18 @@ public class NameCacheSavedData {
     public synchronized String getName(UUID uuid) {
         return names.get(uuid);
     }
+
+    // Reload data from disk and replace in-memory cache
+    private synchronized void reloadInternal() {
+        try {
+            // clear in-memory cache before loading
+            names.clear();
+        } catch (Throwable _t) {}
+        load();
+    }
+
+    public static void reload() {
+        INSTANCE.reloadInternal();
+    }
+
 }

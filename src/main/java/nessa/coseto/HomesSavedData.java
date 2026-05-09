@@ -113,4 +113,18 @@ public class HomesSavedData {
 	public synchronized BlockPos getHome(UUID uuid) {
 		return homes.get(uuid);
 	}
+
+    // Reload data from disk and replace in-memory cache
+    private synchronized void reloadInternal() {
+        try {
+            // clear in-memory cache before loading
+            homes.clear();
+        } catch (Throwable _t) {}
+        load();
+    }
+
+    public static void reload() {
+        INSTANCE.reloadInternal();
+    }
+
 }

@@ -173,4 +173,18 @@ public class ClaimsSavedData {
 	public synchronized java.util.Map<String, UUID> getAllClaims() {
 		return new java.util.HashMap<>(claims);
 	}
+
+    // Reload data from disk and replace in-memory cache
+    private synchronized void reloadInternal() {
+        try {
+            // clear in-memory cache before loading
+            claims.clear();
+        } catch (Throwable _t) {}
+        load();
+    }
+
+    public static void reload() {
+        INSTANCE.reloadInternal();
+    }
+
 }

@@ -112,6 +112,26 @@ private static String resolvePlayerName(net.minecraft.server.MinecraftServer ser
 @Override
 public void onInitialize() {
 LOGGER.info("Hello Fabric world! Registering commands...");
+
+        // /reload-cst: reload Core Server Tools config and saved data (requires permission level 2)
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(Commands.literal("reload-cst").requires(src -> { Entity ent = src.getEntity(); if (ent == null) return true; if (!(ent instanceof ServerPlayer)) return false; ServerPlayer sp = (ServerPlayer) ent; return src.getServer() != null && src.getServer().getPlayerList().isOp(new net.minecraft.server.players.NameAndId(sp.getGameProfile())); }).executes(context -> {
+                CommandSourceStack source = context.getSource();
+                try {
+                    ModConfig.reload();
+                    ClaimsSavedData.reload();
+                    HomesSavedData.reload();
+                    TrustsSavedData.reload();
+                    NameCacheSavedData.reload();
+                    source.sendSuccess(() -> Component.literal("Core Server Tools: config and data reloaded."), false);
+                    return 1;
+                } catch (Exception ex) {
+                    source.sendFailure(Component.literal("Failed to reload Core Server Tools: " + ex.getMessage()));
+                    return 0;
+                }
+            }));
+        });
+
         try {
             java.nio.file.Path cfg = ModConfig.getConfigPath();
             LOGGER.info("CoreServerTools config path: {}", cfg.toAbsolutePath().toString());

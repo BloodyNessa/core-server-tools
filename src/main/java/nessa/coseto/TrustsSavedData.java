@@ -125,4 +125,18 @@ public class TrustsSavedData {
         for (UUID u : set) l.add(u.toString());
         return l;
     }
+
+    // Reload data from disk and replace in-memory cache
+    private synchronized void reloadInternal() {
+        try {
+            // clear in-memory cache before loading
+            trusts.clear();
+        } catch (Throwable _t) {}
+        load();
+    }
+
+    public static void reload() {
+        INSTANCE.reloadInternal();
+    }
+
 }
