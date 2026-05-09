@@ -55,6 +55,55 @@ if (TrustsSavedData.get(world).isTrusted(owner, playerId)) return true;
 return false;
 }
 
+private static String resolvePlayerName(net.minecraft.server.MinecraftServer server, UUID uuid) {
+	if (server == null || uuid == null) return uuid == null ? "unknown" : uuid.toString();
+	try {
+		Object profileCache = null;
+		try {
+			profileCache = server.getClass().getMethod("getProfileCache").invoke(server);
+		} catch (NoSuchMethodException e) {
+			// ignore
+		}
+		if (profileCache != null) {
+			// try several possible method names to retrieve a profile
+			String[] names = new String[] { "get", "getById", "getByUuid", "getProfileById", "getProfile" };
+			for (String mname : names) {
+				try {
+					java.lang.reflect.Method m = profileCache.getClass().getMethod(mname, java.util.UUID.class);
+					Object prof = m.invoke(profileCache, uuid);
+					if (prof == null) continue;
+					// handle Optional-like return values
+					if (prof.getClass().getName().endsWith("Optional")) {
+						java.lang.reflect.Method isPresent = prof.getClass().getMethod("isPresent");
+						if ((Boolean) isPresent.invoke(prof)) {
+							java.lang.reflect.Method get = prof.getClass().getMethod("get");
+							Object inner = get.invoke(prof);
+							java.lang.reflect.Method getName = inner.getClass().getMethod("getName");
+							Object name = getName.invoke(inner);
+							if (name != null) return name.toString();
+						}
+					} else {
+						try {
+							java.lang.reflect.Method getName = prof.getClass().getMethod("getName");
+							Object name = getName.invoke(prof);
+							if (name != null) return name.toString();
+						} catch (NoSuchMethodException ns) {
+							// fallthrough
+						}
+					}
+				} catch (NoSuchMethodException ns) {
+					// try next
+				} catch (Exception ex) {
+					// ignore other reflection errors
+				}
+			}
+		}
+	} catch (Exception e) {
+		// ignore and fallback
+	}
+	return uuid.toString();
+}
+
 @Override
 public void onInitialize() {
 LOGGER.info("Hello Fabric world! Registering commands...");
@@ -140,24 +189,31 @@ ServerTickEvents.END_SERVER_TICK.register(server -> {
 		} else if (prevChunkKey.longValue() != currentChunkKey) {
 			int prevCx = (int)(prevChunkKey.longValue() >> 32);
 			int prevCz = (int)(prevChunkKey.longValue() & 0xffffffffL);
-			UUID prevOwner = ClaimsSavedData.get(level).getOwner(prevCx, prevCz);
-			UUID currOwner = ClaimsSavedData.get(level).getOwner(pcx, pcz);
-			if (currOwner != null && (prevOwner == null || !currOwner.equals(prevOwner))) {
-				Component ownerComp;
-				ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(currOwner);
-				if (ownerPlayer != null) ownerComp = ownerPlayer.getName(); else ownerComp = Component.literal(currOwner.toString());
-				int nameColor;
-				if (currOwner.equals(sp.getUUID())) {
-					nameColor = 0x99FF99; // light green
-				} else if (TrustsSavedData.get(level).isTrusted(currOwner, sp.getUUID())) {
-					nameColor = 0x99CCFF; // light blue
-				} else {
-					nameColor = 0xFF6666; // red
-				}
-				ownerComp = ((net.minecraft.network.chat.MutableComponent)ownerComp).withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(nameColor)));
-				sp.sendSystemMessage(Component.literal("Claim owned by: ").append(ownerComp));
-			}
-			SEEING_LAST_CHUNK.put(uuid, currentChunkKey);
+UUID prevOwner = ClaimsSavedData.get(level).getOwner(prevCx, prevCz);
+UUID currOwner = ClaimsSavedData.get(level).getOwner(pcx, pcz);
+if (currOwner == null) {
+// entered wilderness from a claimed chunk
+if (prevOwner != null) {
+sp.sendSystemMessage(Component.literal("Wilderness"));
+}
+} else {
+if (prevOwner == null || !currOwner.equals(prevOwner)) {
+Component ownerComp;
+ServerPlayer ownerPlayer = server.getPlayerList().getPlayer(currOwner);
+if (ownerPlayer != null) ownerComp = ownerPlayer.getName(); else ownerComp = Component.literal(resolvePlayerName(server, currOwner));
+int nameColor;
+if (currOwner.equals(sp.getUUID())) {
+nameColor = 0x99FF99; // light green
+} else if (TrustsSavedData.get(level).isTrusted(currOwner, sp.getUUID())) {
+nameColor = 0x99CCFF; // light blue
+} else {
+nameColor = 0xFF6666; // red
+}
+ownerComp = ((net.minecraft.network.chat.MutableComponent)ownerComp).withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(nameColor)));
+sp.sendSystemMessage(Component.literal("Claim owned by: ").append(ownerComp));
+}
+}
+SEEING_LAST_CHUNK.put(uuid, currentChunkKey);
 		}
 		int radiusChunks = 10; // show claims within 10 chunks
 		int stride = 4; // spacing along chunk edge
