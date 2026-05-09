@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
 
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class BleedingEdgeMinecraft implements ModInitializer {
 	public static final String MOD_ID = "bleeding-edge-minecraft";
@@ -25,8 +24,7 @@ public class BleedingEdgeMinecraft implements ModInitializer {
 	// That way, it's clear which mod wrote info, warnings, and errors.
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	// Simple in-memory store for player homes (UUID -> BlockPos). Not persisted across restarts.
-	public static final ConcurrentHashMap<UUID, BlockPos> HOMES = new ConcurrentHashMap<>();
+	// Homes are persisted via HomesSavedData (world data). Use HomesSavedData.get(serverLevel) to access.
 
 	@Override
 	public void onInitialize() {
@@ -42,7 +40,8 @@ public class BleedingEdgeMinecraft implements ModInitializer {
 				try {
 					ServerPlayer player = source.getPlayerOrException();
 					BlockPos pos = player.blockPosition();
-					HOMES.put(player.getUUID(), pos);
+					ServerLevel world = source.getLevel();
+					HomesSavedData.get(world).setHome(player.getUUID(), pos);
 					source.sendSuccess(() -> Component.literal("Home set to " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()), false);
 				} catch (CommandSyntaxException e) {
 					source.sendFailure(Component.literal("Only players can use /sethome."));
@@ -54,12 +53,12 @@ public class BleedingEdgeMinecraft implements ModInitializer {
 				CommandSourceStack source = context.getSource();
 				try {
 					ServerPlayer player = source.getPlayerOrException();
-					BlockPos pos = HOMES.get(player.getUUID());
+					ServerLevel world = source.getLevel();
+					BlockPos pos = HomesSavedData.get(world).getHome(player.getUUID());
 					if (pos == null) {
 						source.sendFailure(Component.literal("No home set. Use /sethome first."));
 						return 0;
 					} else {
-						ServerLevel world = source.getLevel();
 						player.teleportTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
 						source.sendSuccess(() -> Component.literal("Teleported to home."), false);
 						return 1;
