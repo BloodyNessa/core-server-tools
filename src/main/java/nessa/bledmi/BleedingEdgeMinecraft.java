@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.network.chat.Component;
@@ -149,88 +150,185 @@ public class BleedingEdgeMinecraft implements ModInitializer {
 				return 1;
 			}));
 
-			dispatcher.register(Commands.literal("claim").executes(context -> {
+			dispatcher.register(Commands.literal("claim")
+				.executes(context -> {
+					CommandSourceStack source = context.getSource();
+					try {
+						ServerPlayer player = source.getPlayerOrException();
+						BlockPos pos = player.blockPosition();
+						int chunkX = pos.getX() >> 4;
+						int chunkZ = pos.getZ() >> 4;
+						ServerLevel world = source.getLevel();
+						boolean success = ClaimsSavedData.get(world).claimChunk(player.getUUID(), chunkX, chunkZ);
+						if (success) {
+							source.sendSuccess(() -> Component.literal("Chunk claimed (" + chunkX + ", " + chunkZ + ")."), false);
+							return 1;
+						} else {
+							UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
+							source.sendFailure(Component.literal("Chunk already claimed by " + (owner != null ? owner.toString() : "someone")));
+							return 0;
+						}
+					} catch (CommandSyntaxException e) {
+						source.sendFailure(Component.literal("Only players can use /claim."));
+						return 0;
+					}
+				})
+				.then(Commands.argument("player", EntityArgument.player())
+					.requires(src -> src.hasPermission(2))
+					.executes(context -> {
+						CommandSourceStack source = context.getSource();
+						try {
+							ServerPlayer operator = source.getPlayerOrException();
+							ServerPlayer target = EntityArgument.getPlayer(context, "player");
+							BlockPos pos = operator.blockPosition();
+							int chunkX = pos.getX() >> 4;
+							int chunkZ = pos.getZ() >> 4;
+							ServerLevel world = source.getLevel();
+							boolean success = ClaimsSavedData.get(world).claimChunk(target.getUUID(), chunkX, chunkZ);
+							if (success) {
+								source.sendSuccess(() -> Component.literal("Chunk claimed for " + target.getGameProfile().getName() + " (" + chunkX + ", " + chunkZ + ")."), false);
+								return 1;
+							} else {
+								UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
+								source.sendFailure(Component.literal("Chunk already claimed by " + (owner != null ? owner.toString() : "someone")));
+								return 0;
+							}
+						} catch (CommandSyntaxException e) {
+							source.sendFailure(Component.literal("Only players can use /claim NAME."));
+							return 0;
+						}
+					})
+			);
+
+			dispatcher.register(Commands.literal("unclaim")
+				.executes(context -> {
+					CommandSourceStack source = context.getSource();
+					try {
+						ServerPlayer player = source.getPlayerOrException();
+						BlockPos pos = player.blockPosition();
+						int chunkX = pos.getX() >> 4;
+						int chunkZ = pos.getZ() >> 4;
+						ServerLevel world = source.getLevel();
+						boolean removed = ClaimsSavedData.get(world).unclaimChunk(player.getUUID(), chunkX, chunkZ);
+						if (removed) {
+							source.sendSuccess(() -> Component.literal("Chunk unclaimed (" + chunkX + ", " + chunkZ + ")."), false);
+							return 1;
+						} else {
+							source.sendFailure(Component.literal("You do not own this chunk or it's not claimed."));
+							return 0;
+						}
+					} catch (CommandSyntaxException e) {
+						source.sendFailure(Component.literal("Only players can use /unclaim."));
+						return 0;
+					}
+				})
+				.then(Commands.argument("player", EntityArgument.player())
+					.requires(src -> src.hasPermission(2))
+					.executes(context -> {
+						CommandSourceStack source = context.getSource();
+						try {
+							ServerPlayer operator = source.getPlayerOrException();
+							ServerPlayer target = EntityArgument.getPlayer(context, "player");
+							BlockPos pos = operator.blockPosition();
+							int chunkX = pos.getX() >> 4;
+							int chunkZ = pos.getZ() >> 4;
+							ServerLevel world = source.getLevel();
+							boolean removed = ClaimsSavedData.get(world).unclaimChunk(target.getUUID(), chunkX, chunkZ);
+							if (removed) {
+								source.sendSuccess(() -> Component.literal("Chunk unclaimed for " + target.getGameProfile().getName() + " (" + chunkX + ", " + chunkZ + ")."), false);
+								return 1;
+							} else {
+								source.sendFailure(Component.literal("Chunk not owned by " + target.getGameProfile().getName() + " or not claimed."));
+								return 0;
+							}
+						} catch (CommandSyntaxException e) {
+							source.sendFailure(Component.literal("Only players can use /unclaim NAME."));
+							return 0;
+						}
+					})
+			);
+
+dispatcher.register(Commands.literal("unclaimall")
+			.executes(context -> {
 				CommandSourceStack source = context.getSource();
 				try {
 					ServerPlayer player = source.getPlayerOrException();
-					BlockPos pos = player.blockPosition();
-					int chunkX = pos.getX() >> 4;
-					int chunkZ = pos.getZ() >> 4;
 					ServerLevel world = source.getLevel();
-					boolean success = ClaimsSavedData.get(world).claimChunk(player.getUUID(), chunkX, chunkZ);
-					if (success) {
-						source.sendSuccess(() -> Component.literal("Chunk claimed (" + chunkX + ", " + chunkZ + ")."), false);
+					int removed = ClaimsSavedData.get(world).unclaimAll(player.getUUID());
+					if (removed > 0) {
+						source.sendSuccess(() -> Component.literal("Unclaimed " + removed + " chunks."), false);
 						return 1;
 					} else {
-						UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
-						source.sendFailure(Component.literal("Chunk already claimed by " + (owner != null ? owner.toString() : "someone")));
+						source.sendFailure(Component.literal("You have no claims."));
 						return 0;
 					}
 				} catch (CommandSyntaxException e) {
-					source.sendFailure(Component.literal("Only players can use /claim."));
+					source.sendFailure(Component.literal("Only players can use /unclaimall."));
 					return 0;
 				}
-			}));
+			})
+			.then(Commands.argument("player", EntityArgument.player())
+				.requires(src -> src.hasPermission(2))
+				.executes(context -> {
+					CommandSourceStack source = context.getSource();
+					try {
+						ServerPlayer target = EntityArgument.getPlayer(context, "player");
+						ServerLevel world = source.getLevel();
+						int removed = ClaimsSavedData.get(world).unclaimAll(target.getUUID());
+						if (removed > 0) {
+							source.sendSuccess(() -> Component.literal("Unclaimed " + removed + " chunks for " + target.getGameProfile().getName()), false);
+							return 1;
+						} else {
+							source.sendFailure(Component.literal("Player has no claims."));
+							return 0;
+						}
+					} catch (CommandSyntaxException e) {
+						source.sendFailure(Component.literal("Usage: /unclaimall [player]"));
+						return 0;
+					}
+				})
+			;
 
-			dispatcher.register(Commands.literal("unclaim").executes(context -> {
+		dispatcher.register(Commands.literal("claims")
+			.executes(context -> {
 				CommandSourceStack source = context.getSource();
 				try {
 					ServerPlayer player = source.getPlayerOrException();
-					BlockPos pos = player.blockPosition();
-					int chunkX = pos.getX() >> 4;
-					int chunkZ = pos.getZ() >> 4;
 					ServerLevel world = source.getLevel();
-					boolean removed = ClaimsSavedData.get(world).unclaimChunk(player.getUUID(), chunkX, chunkZ);
-					if (removed) {
-						source.sendSuccess(() -> Component.literal("Chunk unclaimed (" + chunkX + ", " + chunkZ + ")."), false);
-						return 1;
-					} else {
-						source.sendFailure(Component.literal("You do not own this chunk or it's not claimed."));
+					java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(player.getUUID());
+					if (claims.isEmpty()) {
+						source.sendFailure(Component.literal("You have no claims."));
 						return 0;
+					} else {
+						source.sendSuccess(() -> Component.literal("Your claims: " + String.join(", ", claims)), false);
+						return 1;
 					}
 				} catch (CommandSyntaxException e) {
-					source.sendFailure(Component.literal("Only players can use /unclaim."));
+					source.sendFailure(Component.literal("Only players can use /claims."));
 					return 0;
 				}
-			}));
-
-dispatcher.register(Commands.literal("unclaimall").executes(context -> {
-			CommandSourceStack source = context.getSource();
-			try {
-				ServerPlayer player = source.getPlayerOrException();
-				ServerLevel world = source.getLevel();
-				int removed = ClaimsSavedData.get(world).unclaimAll(player.getUUID());
-				if (removed > 0) {
-					source.sendSuccess(() -> Component.literal("Unclaimed " + removed + " chunks."), false);
-					return 1;
-				} else {
-					source.sendFailure(Component.literal("You have no claims."));
-					return 0;
-				}
-			} catch (CommandSyntaxException e) {
-				source.sendFailure(Component.literal("Only players can use /unclaimall."));
-				return 0;
-			}
-		}));
-
-		dispatcher.register(Commands.literal("claims").executes(context -> {
-			CommandSourceStack source = context.getSource();
-			try {
-				ServerPlayer player = source.getPlayerOrException();
-				ServerLevel world = source.getLevel();
-				java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(player.getUUID());
-				if (claims.isEmpty()) {
-					source.sendFailure(Component.literal("You have no claims."));
-					return 0;
-				} else {
-					source.sendSuccess(() -> Component.literal("Your claims: " + String.join(", ", claims)), false);
-					return 1;
-				}
-			} catch (CommandSyntaxException e) {
-				source.sendFailure(Component.literal("Only players can use /claims."));
-				return 0;
-			}
-		}));
+			})
+			.then(Commands.argument("player", EntityArgument.player())
+				.requires(src -> src.hasPermission(2))
+				.executes(context -> {
+					CommandSourceStack source = context.getSource();
+					try {
+						ServerPlayer target = EntityArgument.getPlayer(context, "player");
+						ServerLevel world = source.getLevel();
+						java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(target.getUUID());
+						if (claims.isEmpty()) {
+							source.sendFailure(Component.literal("Player has no claims."));
+							return 0;
+						} else {
+							source.sendSuccess(() -> Component.literal(target.getGameProfile().getName() + "'s claims: " + String.join(", ", claims)), false);
+							return 1;
+						}
+					} catch (CommandSyntaxException e) {
+						source.sendFailure(Component.literal("Usage: /claims [player]"));
+						return 0;
+					}
+				})
+			;
 
 		dispatcher.register(Commands.literal("home").executes(context -> {
 				CommandSourceStack source = context.getSource();
