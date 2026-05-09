@@ -130,12 +130,12 @@ ServerTickEvents.END_SERVER_TICK.register(server -> {
 		ServerLevel level = (ServerLevel) sp.level();
 		int pcx = sp.blockPosition().getX() >> 4;
 		int pcz = sp.blockPosition().getZ() >> 4;
-		int radiusChunks = 8; // show claims within 8 chunks
+		int radiusChunks = 10; // show claims within 10 chunks
 		int stride = 4; // spacing along chunk edge
 		int shown = 0;
 		java.util.Map<String, UUID> all = ClaimsSavedData.get(level).getAllClaims();
 		for (java.util.Map.Entry<String, UUID> e : all.entrySet()) {
-			if (shown > 200) break; // avoid excessive particle spam per tick
+			if (shown > 400) break; // avoid excessive particle spam per tick
 			String key = e.getKey();
 			String[] parts = key.split(",");
 			int cx = Integer.parseInt(parts[0]);
@@ -148,14 +148,24 @@ ServerTickEvents.END_SERVER_TICK.register(server -> {
 			int x1 = x0 + 15;
 			int z1 = z0 + 15;
 			double y = sp.getY() + 0.5;
+				UUID owner = e.getValue();
+				// choose color: own (light green), trusted (light blue), other (red)
+				int color;
+				if (owner != null && owner.equals(sp.getUUID())) {
+					color = 0x99FF99; // light green
+				} else if (owner != null && TrustsSavedData.get(level).isTrusted(owner, sp.getUUID())) {
+					color = 0x99CCFF; // light blue
+				} else {
+					color = 0xFF6666; // red
+				}
 			for (int x = x0; x <= x1; x += stride) {
-				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x + 0.5, y, z0 + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
-				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x + 0.5, y, z1 + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				level.sendParticles(sp, new net.minecraft.core.particles.DustParticleOptions(color, 1.0f), true, false, x + 0.5, y, z0 + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				level.sendParticles(sp, new net.minecraft.core.particles.DustParticleOptions(color, 1.0f), true, false, x + 0.5, y, z1 + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
 				shown += 2;
 			}
 			for (int z = z0; z <= z1; z += stride) {
-				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x0 + 0.5, y, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
-				level.sendParticles(sp, ParticleTypes.END_ROD, true, false, x1 + 0.5, y, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				level.sendParticles(sp, new net.minecraft.core.particles.DustParticleOptions(color, 1.0f), true, false, x0 + 0.5, y, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
+				level.sendParticles(sp, new net.minecraft.core.particles.DustParticleOptions(color, 1.0f), true, false, x1 + 0.5, y, z + 0.5, 1, 0.0, 0.0, 0.0, 0.0);
 				shown += 2;
 			}
 		}
