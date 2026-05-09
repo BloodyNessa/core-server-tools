@@ -19,7 +19,7 @@ import java.util.UUID;
  * Stored as lines: <uuid> <name>
  */
 public class NameCacheSavedData {
-    private static final Path FILE = Paths.get("core-server-tools", "bledmi_namecache.dat");
+    private static final Path FILE = Paths.get("core-server-tools", "namecache.dat");
     private static final NameCacheSavedData INSTANCE = new NameCacheSavedData();
 
     private final Map<UUID, String> names = new HashMap<>();
@@ -39,6 +39,27 @@ public class NameCacheSavedData {
     }
 
     private synchronized void load() {
+        // migrate old files (bledmi_*) into new core-server-tools folder with simplified names
+        try {
+            Path parent = FILE.getParent();
+            if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
+            Path[] oldCandidates = new Path[] {
+                Paths.get("bledmi_namecache.dat"),
+                Paths.get("core-server-tools", "bledmi_namecache.dat")
+            };
+            for (Path old : oldCandidates) {
+                if (Files.exists(old) && !Files.exists(FILE)) {
+                    try {
+                        Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                    } catch (IOException ex) {
+                        try { Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING); } catch (IOException e) { /* ignore */ }
+                    }
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            // ignore
+        }
         if (!Files.exists(FILE)) return;
         try (BufferedReader r = Files.newBufferedReader(FILE)) {
             String line;

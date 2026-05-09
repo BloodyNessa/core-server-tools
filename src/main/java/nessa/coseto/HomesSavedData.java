@@ -22,7 +22,7 @@ import java.util.UUID;
  * Note: This writes to the server's working directory (./bledmi_homes.dat).
  */
 public class HomesSavedData {
-	private static final Path FILE = Paths.get("core-server-tools", "bledmi_homes.dat");
+	private static final Path FILE = Paths.get("core-server-tools", "homes.dat");
 	private static final HomesSavedData INSTANCE = new HomesSavedData();
 
 	private final Map<UUID, BlockPos> homes = new HashMap<>();
@@ -37,6 +37,27 @@ public class HomesSavedData {
 	}
 
 	private synchronized void load() {
+		// migrate old files (bledmi_*) into new core-server-tools folder with simplified names
+		try {
+			Path parent = FILE.getParent();
+			if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
+			Path[] oldCandidates = new Path[] {
+				Paths.get("bledmi_homes.dat"),
+				Paths.get("core-server-tools", "bledmi_homes.dat")
+			};
+			for (Path old : oldCandidates) {
+				if (Files.exists(old) && !Files.exists(FILE)) {
+					try {
+						Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+					} catch (IOException ex) {
+						try { Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING); } catch (IOException e) { /* ignore */ }
+					}
+					break;
+				}
+			}
+		} catch (IOException e) {
+			// ignore
+		}
 		if (!Files.exists(FILE)) return;
 		try (BufferedReader r = Files.newBufferedReader(FILE)) {
 			String line;

@@ -22,7 +22,7 @@ import java.util.UUID;
  * Note: This is server-global and not world-scoped. Use ClaimsSavedData.get(world) to access.
  */
 public class ClaimsSavedData {
-	private static final Path FILE = Paths.get("core-server-tools", "bledmi_claims.dat");
+	private static final Path FILE = Paths.get("core-server-tools", "claims.dat");
 	private static final ClaimsSavedData INSTANCE = new ClaimsSavedData();
 
 	private final Map<String, UUID> claims = new HashMap<>();
@@ -41,6 +41,27 @@ public class ClaimsSavedData {
 	}
 
 	private synchronized void load() {
+		// migrate old files (bledmi_*) into new core-server-tools folder with simplified names
+		try {
+			Path parent = FILE.getParent();
+			if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
+			Path[] oldCandidates = new Path[] {
+				Paths.get("bledmi_claims.dat"),
+				Paths.get("core-server-tools", "bledmi_claims.dat")
+			};
+			for (Path old : oldCandidates) {
+				if (Files.exists(old) && !Files.exists(FILE)) {
+					try {
+						Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+					} catch (IOException ex) {
+						try { Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING); } catch (IOException e) { /* ignore */ }
+					}
+					break;
+				}
+			}
+		} catch (IOException e) {
+			// ignore
+		}
 		if (!Files.exists(FILE)) return;
 		try (BufferedReader r = Files.newBufferedReader(FILE)) {
 			String line;

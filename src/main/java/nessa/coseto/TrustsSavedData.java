@@ -21,7 +21,7 @@ import java.util.UUID;
  * Stores lines of: <owner-uuid> <trusted-uuid>
  */
 public class TrustsSavedData {
-    private static final Path FILE = Paths.get("core-server-tools", "bledmi_trusts.dat");
+    private static final Path FILE = Paths.get("core-server-tools", "trusts.dat");
     private static final TrustsSavedData INSTANCE = new TrustsSavedData();
 
     private final Map<UUID, Set<UUID>> trusts = new HashMap<>();
@@ -36,6 +36,27 @@ public class TrustsSavedData {
     }
 
     private synchronized void load() {
+        // migrate old files (bledmi_*) into new core-server-tools folder with simplified names
+        try {
+            Path parent = FILE.getParent();
+            if (parent != null && !Files.exists(parent)) Files.createDirectories(parent);
+            Path[] oldCandidates = new Path[] {
+                Paths.get("bledmi_trusts.dat"),
+                Paths.get("core-server-tools", "bledmi_trusts.dat")
+            };
+            for (Path old : oldCandidates) {
+                if (Files.exists(old) && !Files.exists(FILE)) {
+                    try {
+                        Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                    } catch (IOException ex) {
+                        try { Files.move(old, FILE, StandardCopyOption.REPLACE_EXISTING); } catch (IOException e) { /* ignore */ }
+                    }
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            // ignore
+        }
         if (!Files.exists(FILE)) return;
         try (BufferedReader r = Files.newBufferedReader(FILE)) {
             String line;
