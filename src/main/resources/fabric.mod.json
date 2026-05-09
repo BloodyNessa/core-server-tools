@@ -11,7 +11,7 @@
     "homepage": "https://github.com/BloodyNessa/core-server-tools",
     "sources": "https://github.com/BloodyNessa/core-server-tools"
   },
-  "license": "CC0-1.0",
+  "license": "MIT",
   "icon": "assets/core-server-tools/icon.png",
   "environment": "*",
   "entrypoints": {
