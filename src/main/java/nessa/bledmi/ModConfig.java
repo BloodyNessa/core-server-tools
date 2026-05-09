@@ -23,6 +23,14 @@ public class ModConfig {
         }
         CONFIG_PATH = cfg;
         load();
+        // Log resolved path (FabricLoader may not be available during static analysis)
+        try {
+            java.nio.file.Path p = CONFIG_PATH;
+            System.out.println("[CoreServerTools] Resolved config path: " + p.toAbsolutePath().toString());
+            System.out.println("[CoreServerTools] Config file exists: " + java.nio.file.Files.exists(p));
+        } catch (Throwable t) {
+            // ignore
+        }
     }
 
     public static synchronized void load() {
