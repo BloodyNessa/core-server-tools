@@ -194,7 +194,45 @@ public class BleedingEdgeMinecraft implements ModInitializer {
 				}
 			}));
 
-dispatcher.register(Commands.literal("home").executes(context -> {
+dispatcher.register(Commands.literal("unclaimall").executes(context -> {
+			CommandSourceStack source = context.getSource();
+			try {
+				ServerPlayer player = source.getPlayerOrException();
+				ServerLevel world = source.getLevel();
+				int removed = ClaimsSavedData.get(world).unclaimAll(player.getUUID());
+				if (removed > 0) {
+					source.sendSuccess(() -> Component.literal("Unclaimed " + removed + " chunks."), false);
+					return 1;
+				} else {
+					source.sendFailure(Component.literal("You have no claims."));
+					return 0;
+				}
+			} catch (CommandSyntaxException e) {
+				source.sendFailure(Component.literal("Only players can use /unclaimall."));
+				return 0;
+			}
+		}));
+
+		dispatcher.register(Commands.literal("claims").executes(context -> {
+			CommandSourceStack source = context.getSource();
+			try {
+				ServerPlayer player = source.getPlayerOrException();
+				ServerLevel world = source.getLevel();
+				java.util.List<String> claims = ClaimsSavedData.get(world).getClaims(player.getUUID());
+				if (claims.isEmpty()) {
+					source.sendFailure(Component.literal("You have no claims."));
+					return 0;
+				} else {
+					source.sendSuccess(() -> Component.literal("Your claims: " + String.join(", ", claims)), false);
+					return 1;
+				}
+			} catch (CommandSyntaxException e) {
+				source.sendFailure(Component.literal("Only players can use /claims."));
+				return 0;
+			}
+		}));
+
+		dispatcher.register(Commands.literal("home").executes(context -> {
 				CommandSourceStack source = context.getSource();
 				try {
 					ServerPlayer player = source.getPlayerOrException();

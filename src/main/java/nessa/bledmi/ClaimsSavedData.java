@@ -112,4 +112,35 @@ public class ClaimsSavedData {
 	public synchronized UUID getOwner(int cx, int cz) {
 		return claims.get(key(cx, cz));
 	}
+
+	/**
+	 * Return a list of claimed chunk coordinates for the given owner.
+	 * Each entry is a string "cx,cz".
+	 */
+	public synchronized java.util.List<String> getClaims(UUID owner) {
+		java.util.List<String> list = new java.util.ArrayList<>();
+		for (java.util.Map.Entry<String, UUID> e : claims.entrySet()) {
+			if (e.getValue().equals(owner)) {
+				list.add(e.getKey());
+			}
+		}
+		return list;
+	}
+
+	/**
+	 * Unclaim all chunks owned by the given owner. Returns number removed.
+	 */
+	public synchronized int unclaimAll(UUID owner) {
+		int removed = 0;
+		java.util.Iterator<java.util.Map.Entry<String, UUID>> it = claims.entrySet().iterator();
+		while (it.hasNext()) {
+			java.util.Map.Entry<String, UUID> e = it.next();
+			if (e.getValue().equals(owner)) {
+				it.remove();
+				removed++;
+			}
+		}
+		if (removed > 0) save();
+		return removed;
+	}
 }
