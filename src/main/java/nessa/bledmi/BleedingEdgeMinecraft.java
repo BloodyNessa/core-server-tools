@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.ItemEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,10 @@ return false;
 }
 
 private static String resolvePlayerName(net.minecraft.server.MinecraftServer server, UUID uuid) {
+		// check persistent name cache first
+		String cached = NameCacheSavedData.get().getName(uuid);
+		if (cached != null) return cached;
+
 	if (server == null || uuid == null) return uuid == null ? "unknown" : uuid.toString();
 	try {
 		Object profileCache = null;
@@ -107,6 +112,25 @@ private static String resolvePlayerName(net.minecraft.server.MinecraftServer ser
 @Override
 public void onInitialize() {
 LOGGER.info("Hello Fabric world! Registering commands...");
+
+
+// Update name cache on player join
+try {
+ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+try {
+ServerPlayer player = handler.player;
+if (player != null) {
+ServerLevel lvl = (ServerLevel) player.level();
+NameCacheSavedData.get(lvl).setName(player.getUUID(), player.getName().getString());
+}
+} catch (Exception ex) {
+// ignore
+}
+});
+} catch (Throwable t) {
+// ignore if event API not present at runtime
+}
+
 
 // Claim protection handlers
 UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
@@ -314,6 +338,7 @@ if (!isOp) {
 boolean success = ClaimsSavedData.get(world).claimChunk(player.getUUID(), chunkX, chunkZ);
 if (success) {
 source.sendSuccess(() -> Component.literal("Chunk claimed (" + chunkX + ", " + chunkZ + ")."), false);
+NameCacheSavedData.get(world).setName(player.getUUID(), player.getName().getString());
 return 1;
 } else {
 UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
@@ -358,6 +383,7 @@ if (!isTargetOp) {
 boolean success = ClaimsSavedData.get(world).claimChunk(target.getUUID(), chunkX, chunkZ);
 if (success) {
 source.sendSuccess(() -> Component.literal("Chunk claimed for " + target.getName().getString() + " (" + chunkX + ", " + chunkZ + ")."), false);
+NameCacheSavedData.get(world).setName(target.getUUID(), target.getName().getString());
 return 1;
 } else {
 UUID owner = ClaimsSavedData.get(world).getOwner(chunkX, chunkZ);
