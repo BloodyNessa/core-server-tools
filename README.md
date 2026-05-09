@@ -1,4 +1,4 @@
-# Bleeding Edge Minecraft
+# Core Server Tools
 
 ## Setup
 
