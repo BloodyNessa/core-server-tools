@@ -687,23 +687,28 @@ dispatcher.register(Commands.literal("unseeclaims").executes(context -> {
 
 // /home
 dispatcher.register(Commands.literal("home").executes(context -> {
-CommandSourceStack source = context.getSource();
-try {
-ServerPlayer player = source.getPlayerOrException();
-ServerLevel world = source.getLevel();
-BlockPos pos = HomesSavedData.get(world).getHome(player.getUUID());
-if (pos == null) {
-source.sendFailure(Component.literal("No home set. Use /sethome first."));
-return 0;
-} else {
-player.teleportTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-source.sendSuccess(() -> Component.literal("Teleported to home."), false);
-return 1;
-}
-} catch (CommandSyntaxException e) {
-source.sendFailure(Component.literal("Only players can use /home."));
-return 0;
-}
+    CommandSourceStack source = context.getSource();
+    try {
+        ServerPlayer player = source.getPlayerOrException();
+        ServerLevel world = source.getLevel();
+        HomesSavedData.HomeRecord rec = HomesSavedData.getHomeRecord(player.getUUID());
+        if (rec == null) {
+            source.sendFailure(Component.literal("No home set. Use /sethome first."));
+            return 0;
+        }
+        BlockPos pos = HomesSavedData.get(world).getHome(player.getUUID());
+        if (pos == null) {
+            source.sendFailure(Component.literal("Home is set in dimension: " + rec.dim + ". Switch to that world to use /home."));
+            return 0;
+        } else {
+            player.teleportTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+            source.sendSuccess(() -> Component.literal("Teleported to home."), false);
+            return 1;
+        }
+    } catch (CommandSyntaxException e) {
+        source.sendFailure(Component.literal("Only players can use /home."));
+        return 0;
+    }
 }));
 });
 }

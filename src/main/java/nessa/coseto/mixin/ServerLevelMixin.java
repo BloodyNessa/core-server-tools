@@ -44,7 +44,7 @@ public class ServerLevelMixin {
             }
         }
 
-        ClaimsSavedData claims = ClaimsSavedData.get(self);
+        ClaimsSavedData.View claims = ClaimsSavedData.get(self);
 
         int chunkMinX = (int)Math.floor((x - radius) / 16.0d);
         int chunkMaxX = (int)Math.floor((x + radius) / 16.0d);
